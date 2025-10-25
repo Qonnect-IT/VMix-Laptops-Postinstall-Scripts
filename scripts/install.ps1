@@ -21,7 +21,7 @@ $HasWinget = Ensure-Winget -Log $Log
 # 3) Install from simple winget list (optional)
 $pkgList = Join-Path $PSScriptRoot "packages-winget.txt"
 if (Test-Path -LiteralPath $pkgList) {
-  $Log.Write("Processing packages-winget.txt …")
+  $Log.Write("Processing packages-winget.txt...")
   Get-Content $pkgList | ForEach-Object {
     $id = $_.Trim()
     if (-not $id -or $id.StartsWith("#")) { return }
@@ -36,7 +36,7 @@ if (Test-Path -LiteralPath $pkgList) {
 # 4) Arbitrary installers (optional via installers.json)
 $instJson = Join-Path $PSScriptRoot "installers.json"
 if (Test-Path -LiteralPath $instJson) {
-  $Log.Write("Processing installers.json …")
+  $Log.Write("Processing installers.json...")
   try {
     # -Raw avoids concatenating line-by-line strings
     $defs = Get-Content $instJson -Raw | ConvertFrom-Json
@@ -86,7 +86,7 @@ if (Test-Path -LiteralPath $instJson) {
 try {
   $modelScript = Join-Path $PSScriptRoot "models\MSI-Stealth-14.ps1"
   if ((($sys.Model) -like "*Stealth*14*") -and (Test-Path -LiteralPath $modelScript)) {
-    $Log.Write("Applying model-specific steps for MSI Stealth 14 …")
+    $Log.Write("Applying model-specific steps for MSI Stealth 14...")
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $modelScript -LogPath $LogPath
   } else {
     $Log.Write("No model-specific script matched; running models\default.ps1 if present.")
