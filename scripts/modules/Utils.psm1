@@ -4,15 +4,17 @@ $ErrorActionPreference = 'Stop'
 $script:ProgressPreference = 'SilentlyContinue'
 
 function New-Logger {
-  param([Parameter(Mandatory)][string]$Path)
-  if (-not (Test-Path -LiteralPath (Split-Path -Parent $Path))) {
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
+  param([Parameter(Mandatory=$true)][string]$Path)
+  $dir = Split-Path -Parent $Path
+  if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
   }
   if (-not (Test-Path -LiteralPath $Path)) {
     New-Item -ItemType File -Force -Path $Path | Out-Null
   }
+  # Simple object with a Write() method
   return [pscustomobject]@{
-    Path = $Path
+    Path  = $Path
     Write = {
       param([string]$Msg)
       $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
@@ -24,48 +26,58 @@ function New-Logger {
 }
 
 function Test-Admin {
-  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-  $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-  return $principal.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+  $id  = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $pr  = New-Object Security.Principal.WindowsPrincipal($id)
+  return $pr.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
 
 function Invoke-Download {
   [CmdletBinding()]
   param(
-    [Parameter(Mandatory)][string]$Url,
-    [Parameter(Mandatory)][string]$OutFile,
+    [Parameter(Mandatory=$true)][string]$Url,
+    [Parameter(Mandatory=$true)][string]$OutFile,
     [int]$TimeoutSec = 600,
     [int]$MaxRetries = 4,
     $Log
   )
-  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
-  for ($i=1;$i -le $MaxRetries;$i++){
-    try{
-      if ($Log) { $Log.Write("Downloading: $Url → $OutFile (attempt $i/$MaxRetries)") }
+  # Use TLS 1.2 for GitHub and most CDNs
+  try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+  } catch {}
+
+  for ($i = 1; $i -le $MaxRetries; $i++) {
+    try {
+      if ($Log) { $Log.Write("Downloading: $Url -> $OutFile (attempt $i/$MaxRetries)") }
       Invoke-WebRequest -UseBasicParsing -Uri $Url -OutFile $OutFile -TimeoutSec $TimeoutSec
-      if ((Get-Item $OutFile).Length -lt 1024) { throw "Downloaded file too small" }
+      if ((Get-Item -LiteralPath $OutFile).Length -lt 1024) { throw "Downloaded file too small" }
       return $OutFile
     } catch {
       if ($i -eq $MaxRetries) { throw }
-      if ($Log) { $Log.Write("Download failed: $($_.Exception.Message). Retrying…") }
-      Start-Sleep -Seconds ([Math]::Min(15, 2*$i))
+      if ($Log) { $Log.Write("Download failed: $($_.Exception.Message). Retrying...") }
+      Start-Sleep -Seconds ([Math]::Min(15, 2 * $i))
     }
   }
 }
 
 function Test-FileHashMatch {
-  param([string]$Path,[string]$Sha256,[switch]$Quiet)
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [string]$Sha256,
+    [switch]$Quiet
+  )
   if (-not $Sha256) { return $true }
   $calc = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToUpperInvariant()
   $ok = ($calc -eq $Sha256.ToUpperInvariant())
-  if (-not $ok -and -not $Quiet) { Write-Warning "SHA256 mismatch for $Path (expected $Sha256, got $calc)" }
+  if (-not $ok -and -not $Quiet) {
+    Write-Warning "SHA256 mismatch for $Path (expected $Sha256, got $calc)"
+  }
   return $ok
 }
 
 function Install-MSI {
   [CmdletBinding()]
   param(
-    [Parameter(Mandatory)][string]$Path,
+    [Parameter(Mandatory=$true)][string]$Path,
     [string]$Arguments = "/qn /norestart",
     $Log
   )
@@ -77,11 +89,13 @@ function Install-MSI {
 function Install-EXE {
   [CmdletBinding()]
   param(
-    [Parameter(Mandatory)][string]$Path,
+    [Parameter(Mandatory=$true)][string]$Path,
     [string]$Arguments = "/S",
     $Log
   )
   if ($Log) { $Log.Write("Installing EXE: $Path $Arguments") }
+  # Unblock in case it was downloaded from the internet
+  try { Unblock-File -LiteralPath $Path -ErrorAction SilentlyContinue } catch {}
   Start-Process -FilePath $Path -ArgumentList $Arguments -Wait
   return $LASTEXITCODE
 }
@@ -89,7 +103,7 @@ function Install-EXE {
 function Invoke-Ps1 {
   [CmdletBinding()]
   param(
-    [Parameter(Mandatory)][string]$Path,
+    [Parameter(Mandatory=$true)][string]$Path,
     [string[]]$Arguments = @(),
     $Log
   )
@@ -102,12 +116,11 @@ function Ensure-Winget {
   param($Log)
   try {
     winget --version | Out-Null
-    if ($Log) { $Log.Write("winget available: $(winget --version)") }
-    # Refresh sources defensively
+    if ($Log) { $Log.Write("winget available") }
     try { winget source update | Out-Null } catch {}
     return $true
   } catch {
-    if ($Log) { $Log.Write("winget not available; some installs may be skipped.") }
+    if ($Log) { $Log.Write("winget not available; some installs may be skipped") }
     return $false
   }
 }
@@ -115,7 +128,7 @@ function Ensure-Winget {
 function Install-WingetPackage {
   [CmdletBinding()]
   param(
-    [Parameter(Mandatory)][string]$Id,
+    [Parameter(Mandatory=$true)][string]$Id,
     [string]$OverrideArgs = "",
     [switch]$Exact,
     $Log
