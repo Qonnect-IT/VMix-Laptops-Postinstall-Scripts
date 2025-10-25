@@ -1,6 +1,7 @@
 # One package ID per line (use `winget show <name>` to find IDs)
+# NF8H0H7WMLT # Nvidea Control Panel (windows store)
 VideoLAN.VLC
 Audacity.Audacity
 7zip.7zip
 FocusriteAudioEngineeringLtd.FocusriteControl2
-9NF8H0H7WMLT # Nvidea Control Panel (windows store)
+9NF8H0H7WMLT
