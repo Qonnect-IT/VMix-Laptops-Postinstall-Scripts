@@ -69,18 +69,7 @@ if (Test-Path -LiteralPath $instJson) {
   }
 }
 
-# 5) Bitfocus Companion (dedicated helper keeps logic isolated)
-try {
-  $comp = Join-Path $PSScriptRoot "companion.ps1"
-  if (Test-Path -LiteralPath $comp) {
-    $Log.Write("Running companion.ps1 …")
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $comp -LogPath $LogPath
-  } else {
-    $Log.Write("companion.ps1 not present; skipping.")
-  }
-} catch { $Log.Write("Companion step failed: $($_.Exception.Message)") }
-
-# 6) Model-specific steps (example: MSI Stealth 14)
+# 5) Model-specific steps (example: MSI Stealth 14)
 try {
   $modelScript = Join-Path $PSScriptRoot "models\MSI-Stealth-14.ps1"
   if ((($sys.Model) -like "*Stealth*14*") -and (Test-Path -LiteralPath $modelScript)) {
