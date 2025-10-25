@@ -77,7 +77,7 @@ if (Test-Path -LiteralPath $instJson) {
         default { throw "Unknown installer type: $type" }
       }
     } catch {
-      $Log.Write("Installer failed: $name — $($_.Exception.Message)")
+      $Log.Write("Installer failed: $name - $($_.Exception.Message)")
     }
   }
 }
