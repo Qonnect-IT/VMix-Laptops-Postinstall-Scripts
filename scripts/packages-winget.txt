@@ -3,3 +3,4 @@ VideoLAN.VLC
 Audacity.Audacity
 7zip.7zip
 FocusriteAudioEngineeringLtd.FocusriteControl2
+9NF8H0H7WMLT # Nvidea Control Panel (windows store)
