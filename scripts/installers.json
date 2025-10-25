@@ -8,6 +8,20 @@
       "sha256": ""
     },
     {
+      "name": "Focusrite Control",
+      "url": "https://fael-downloads-prod.focusrite.com/customer/prod/downloads/focusrite_control_3_26_0.exe",
+      "type": "exe",
+      "args": "/S",
+      "sha256": ""
+    },
+    {
+      "name": "Blackmagic Desktop Video 15.1",
+      "url": "https://www.hacknet.nl/Desktop Video Installer v15.1.msi",
+      "type": "msi",
+      "args": "ALLUSERS=1 /qn /norestart",
+      "sha256": ""
+    },
+    {
       "name": "VMix 28",
       "url": "https://cdn.vmix.com/download/vmix28.exe",
       "type": "exe",
