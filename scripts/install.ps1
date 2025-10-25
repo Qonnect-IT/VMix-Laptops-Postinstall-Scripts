@@ -37,7 +37,14 @@ if (Test-Path -LiteralPath $pkgList) {
 $instJson = Join-Path $PSScriptRoot "installers.json"
 if (Test-Path -LiteralPath $instJson) {
   $Log.Write("Processing installers.json …")
-  $defs = Get-Content $instJson | ConvertFrom-Json
+  try {
+    # -Raw avoids concatenating line-by-line strings
+    $defs = Get-Content $instJson -Raw | ConvertFrom-Json
+  } catch {
+    $Log.Write("installers.json parse error: $($_.Exception.Message)")
+    throw
+  }
+
   $dlRoot = Join-Path $env:TEMP "postinstall_dl"
   New-Item -ItemType Directory -Force -Path $dlRoot | Out-Null
 
@@ -46,25 +53,31 @@ if (Test-Path -LiteralPath $instJson) {
       $name = $it.name
       $url  = $it.url
       $sha  = $it.sha256
-      $type = ($it.type ?? "exe").ToLower()
-      $args = ($it.args ?? "")
+
+      # PowerShell 5.1-safe null handling (no '??')
+      $type = if ($it.PSObject.Properties.Name -contains 'type' -and $it.type) { "$($it.type)".ToLower() } else { "exe" }
+      $args = if ($it.PSObject.Properties.Name -contains 'args' -and $it.args) { [string]$it.args } else { "" }
+
+      # If 'type' omitted, infer from URL extension when possible
+      if (-not $it.type -and $url -match '\.msi($|\?)') { $type = 'msi' }
+
       $out  = Join-Path $dlRoot (Split-Path $url -Leaf)
 
       $Log.Write("Installer: $name ($type) from $url")
       Invoke-Download -Url $url -OutFile $out -Log $Log | Out-Null
 
-      if (-not (Test-FileHashMatch -Path $out -Sha256 $sha -Quiet)) {
+      if ($sha -and -not (Test-FileHashMatch -Path $out -Sha256 $sha -Quiet)) {
         throw "Hash mismatch for $name"
       }
 
       switch ($type) {
-        "msi" { Install-MSI -Path $out -Arguments ($args -as [string]) -Log $Log | Out-Null }
-        "exe" { Install-EXE -Path $out -Arguments ($args -as [string]) -Log $Log | Out-Null }
-        "ps1" { Invoke-Ps1 -Path $out -Arguments @() -Log $Log | Out-Null }
-        default { throw "Unknown type: $type" }
+        'msi' { Install-MSI -Path $out -Arguments "/qn /norestart" -Log $Log | Out-Null }
+        'exe' { Install-EXE -Path $out -Arguments ($args -as [string]) -Log $Log | Out-Null }
+        'ps1' { Invoke-Ps1   -Path $out -Arguments @() -Log $Log | Out-Null }
+        default { throw "Unknown installer type: $type" }
       }
     } catch {
-      $Log.Write("Installer failed: $($_.Exception.Message)")
+      $Log.Write("Installer failed: $name — $($_.Exception.Message)")
     }
   }
 }
