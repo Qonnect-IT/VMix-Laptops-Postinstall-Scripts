@@ -1,0 +1,4 @@
+# One package ID per line (use `winget show <name>` to find IDs)
+VideoLAN.VLC
+Audacity.Audacity
+7zip.7zip
