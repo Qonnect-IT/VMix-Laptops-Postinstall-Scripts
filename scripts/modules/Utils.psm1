@@ -5,6 +5,7 @@ $script:ProgressPreference = 'SilentlyContinue'
 
 function New-Logger {
   param([Parameter(Mandatory=$true)][string]$Path)
+
   $dir = Split-Path -Parent $Path
   if ($dir -and -not (Test-Path -LiteralPath $dir)) {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -12,17 +13,19 @@ function New-Logger {
   if (-not (Test-Path -LiteralPath $Path)) {
     New-Item -ItemType File -Force -Path $Path | Out-Null
   }
-  # Simple object with a Write() method
-  return [pscustomobject]@{
-    Path  = $Path
-    Write = {
-      param([string]$Msg)
-      $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-      $line = "[$ts] $Msg"
-      Write-Host $line
-      Add-Content -LiteralPath $this.Path -Value $line
-    }
-  }
+
+  # Build an object and attach a real ScriptMethod 'Write'
+  $obj = New-Object PSObject
+  $obj | Add-Member -NotePropertyName Path -NotePropertyValue $Path
+  $obj | Add-Member -MemberType ScriptMethod -Name Write -Value {
+    param([string]$Msg)
+    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $line = "[$ts] $Msg"
+    Write-Host $line
+    Add-Content -LiteralPath $this.Path -Value $line
+  } -Force
+
+  return $obj
 }
 
 function Test-Admin {
