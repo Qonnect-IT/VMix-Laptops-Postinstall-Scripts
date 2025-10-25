@@ -102,20 +102,21 @@ try {
   $dxKey = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
   New-Item -Path $dxKey -Force | Out-Null
 
-  $pf86  = $env:ProgramFiles(x86)
-  $apps  = @(
-    (Join-Path $pf86 'vMix\vMix64.exe'),
-    (Join-Path $pf86 'vMix\vMix.exe')
+  # Get "Program Files (x86)" robustly (works on x64 and x86)
+  $pf86 = [System.Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
+  if (-not $pf86) { $pf86 = "$env:SystemDrive\Program Files (x86)" }  # fallback
+
+  $apps = @(
+    Join-Path $pf86 'vMix\vMix64.exe',
+    Join-Path $pf86 'vMix\vMix.exe'
   )
 
   foreach ($exe in $apps) {
     New-ItemProperty -Path $dxKey -Name $exe -PropertyType String -Value 'GpuPreference=2;' -Force | Out-Null
   }
-
-  # optional logging, if you use $Log:
-  if ($Log) { $Log.Write("Set GPU prefs for vMix executables in HKCU") }
+  Write-Host "Set GPU prefs for vMix executables."
 } catch {
-  if ($Log) { $Log.Write("Failed to set GPU prefs: $($_.Exception.Message)") }
+  Write-Warning ("Failed to set GPU prefs: " + $_.Exception.Message)
 }
 
 
