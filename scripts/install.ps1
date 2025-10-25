@@ -97,5 +97,27 @@ try {
   }
 } catch { $Log.Write("Model script failed: $($_.Exception.Message)") }
 
+# 6) vMix -> prefer High Performance GPU for this user
+try {
+  $dxKey = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
+  New-Item -Path $dxKey -Force | Out-Null
+
+  $pf86  = $env:ProgramFiles(x86)
+  $apps  = @(
+    (Join-Path $pf86 'vMix\vMix64.exe'),
+    (Join-Path $pf86 'vMix\vMix.exe')
+  )
+
+  foreach ($exe in $apps) {
+    New-ItemProperty -Path $dxKey -Name $exe -PropertyType String -Value 'GpuPreference=2;' -Force | Out-Null
+  }
+
+  # optional logging, if you use $Log:
+  if ($Log) { $Log.Write("Set GPU prefs for vMix executables in HKCU") }
+} catch {
+  if ($Log) { $Log.Write("Failed to set GPU prefs: $($_.Exception.Message)") }
+}
+
+
 $Log.Write("=== Qonnect-IT Post-install complete ===")
 exit 0
