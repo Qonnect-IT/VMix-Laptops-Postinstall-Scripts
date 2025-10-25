@@ -97,23 +97,23 @@ try {
   }
 } catch { $Log.Write("Model script failed: $($_.Exception.Message)") }
 
-# 6) vMix -> prefer High Performance GPU for this user
+# 6) vMix -> prefer High Performance GPU for this user, Set vMix to use the High Performance GPU for the current user (HKCU)
 try {
   $dxKey = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
   New-Item -Path $dxKey -Force | Out-Null
 
-  # Get "Program Files (x86)" robustly (works on x64 and x86)
+  # Get "Program Files (x86)" robustly
   $pf86 = [System.Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
   if (-not $pf86) { $pf86 = "$env:SystemDrive\Program Files (x86)" }  # fallback
 
-  $apps = @(
-    Join-Path $pf86 'vMix\vMix64.exe',
-    Join-Path $pf86 'vMix\vMix.exe'
-  )
+  $childPaths = @('vMix\vMix64.exe','vMix\vMix.exe')
 
-  foreach ($exe in $apps) {
+  foreach ($child in $childPaths) {
+    # IMPORTANT: pass a single string as -ChildPath
+    $exe = Join-Path -Path $pf86 -ChildPath $child
     New-ItemProperty -Path $dxKey -Name $exe -PropertyType String -Value 'GpuPreference=2;' -Force | Out-Null
   }
+
   Write-Host "Set GPU prefs for vMix executables."
 } catch {
   Write-Warning ("Failed to set GPU prefs: " + $_.Exception.Message)
