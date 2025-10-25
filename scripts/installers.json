@@ -1,0 +1,11 @@
+{
+  "installers": [
+    {
+      "name": "Bitfocus Companion 4.1.4",
+      "url": "https://s4.bitfocus.io/builds/companion/companion-win64-4.1.4+8492-stable-4cb4314544.exe",
+      "type": "exe",
+      "args": "/S",
+      "sha256": ""
+    }
+  ]
+}
